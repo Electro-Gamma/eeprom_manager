@@ -8,7 +8,7 @@ CXXFLAGS = -Wall -Wextra -std=c++17 -O2
 SRCS = i2ceeprom.cpp
 
 # Executable name
-TARGET = i2ceeprom
+TARGET = eeprom_manager
 
 # Default target
 all: $(TARGET)
