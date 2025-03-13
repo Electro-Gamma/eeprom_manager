@@ -63,7 +63,7 @@ make
 
 ### **3. Run the Program**
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --read
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --read
 ```
 
 ---
@@ -73,13 +73,13 @@ sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --read
 ### **1. Detect I2C Devices**
 Scan for connected I2C EEPROM chips:
 ```bash
-sudo ./eeprom_manager --bus 1 --detect
+sudo ./i2ceeprom --bus 1 --detect
 ```
 
 ### **2. Read EEPROM Contents**
 Dump EEPROM data to the console:
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --read
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --read
 ```
 
 Example Output:
@@ -91,22 +91,22 @@ EEPROM DUMP 0x0000 0x4000
 
 ### **3. Write Random Data**
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --random
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --random
 ```
 
 ### **4. Erase (Blank) EEPROM**
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --blank
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --blank
 ```
 
 ### **5. Flash Firmware to EEPROM**
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --write-firmware firmware.bin
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --write-firmware firmware.bin
 ```
 
 ### **6. Backup EEPROM Firmware**
 ```bash
-sudo ./eeprom_manager --bus 1 --address 0x50 --size 24C256 --save-firmware backup.bin
+sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --save-firmware backup.bin
 ```
 
 ---
