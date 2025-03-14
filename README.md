@@ -17,6 +17,39 @@ Supported EEPROM types:
 ```
 24C02, 24C04, 24C08, 24C16, 24C32, 24C64, 24C128, 24C256, 24C512, 24C1024
 ```
+___
+
+## 🔌 **How to Connect EEPROM to Raspberry Pi (or Linux-based SBC)**
+
+1. **Identify I2C Pins on Your Board**  
+   - Raspberry Pi:
+     ```
+     SDA → GPIO2 (Pin 3)
+     SCL → GPIO3 (Pin 5)
+     GND → Any GND Pin
+     VCC → 3.3V or 5V (Depends on EEPROM)
+     ```
+
+2. **Wiring Diagram**
+   ```
+   Raspberry Pi         EEPROM (24CXX)
+   -------------------------------------
+   GPIO2 (SDA)  <-->   SDA
+   GPIO3 (SCL)  <-->   SCL
+   GND         <-->   GND
+   3.3V or 5V  <-->   VCC
+   ```
+
+3. **Enable I2C on Raspberry Pi**
+   ```bash
+   sudo raspi-config   # Enable I2C in "Interfacing Options"
+   ```
+
+4. **Check if EEPROM is Detected**
+   ```bash
+   sudo i2cdetect -y 1
+   ```
+   If the EEPROM is connected, you should see an address like `0x50`.
 
 ---
 
@@ -111,31 +144,6 @@ sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --save-firmware backup.bin
 
 ---
 
-
-## 🔧 **Troubleshooting & Common Issues**
-
-### ❓ **EEPROM Not Detected**
-**Solution:**
-1. Check if I2C is enabled:
-   ```bash
-   sudo i2cdetect -y 1
-   ```
-2. Ensure correct **I2C address** and **bus number** are used.
-
-### ❓ **Cannot Access I2C Device**
-**Solution:**
-- Run the program with **sudo** to access I2C devices.
-
-### ❓ **Wrong EEPROM Size Detected**
-**Solution:**
-- Manually specify EEPROM type using `--size 24C256`.
-
-### ❓ **Firmware Flashing Fails**
-**Solution:**
-- Ensure the **firmware file size** does not exceed EEPROM capacity.
-
-
----
 
 ## 📜 **License**
 This project is licensed under the **MIT License**.  
