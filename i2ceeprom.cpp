@@ -16,6 +16,7 @@
 
 // Map of EEPROM sizes
 std::map<std::string, int> eeprom_sizes = {
+    {"24C01", 128},    // 1 Kb -> 128 bytes
     {"24C02", 256},    // 2 Kb -> 256 bytes
     {"24C04", 512},    // 4 Kb -> 512 bytes
     {"24C08", 1024},   // 8 Kb -> 1024 bytes

@@ -132,7 +132,22 @@ sudo ./i2ceeprom --bus 1 --address 0x50 --size 24C256 --save-firmware backup.bin
 ```
 
 ---
+## EEPROM Table
 
+| Type   | Returns | Memory  | Page Size |
+|:-------|:--------|:--------|:---------:|
+|  -     |    0    |         |           |
+| 24C512 |  65536  |  64 KB  |   128     |       
+| 24C256 |  32768  |  32 KB  |    64     |       
+| 24C128 |  16384  |  16 KB  |    64     |       
+| 24C64  |   8192  |   8 KB  |    32     |       
+| 24C32  |   4096  |   4 KB  |    32     |       
+| 24C16  |   2048  |   2 KB  |    16     |       
+| 24C08  |   1024  |   1 KB  |    16     |       
+| 24C04  |    512  |  512 b  |    16     |       
+| 24C02  |    256  |  256 b  |     8     |       
+| 24C01  |    128  |  128 b  |     8     |
+___
 
 ## 📜 **License**
 This project is licensed under the **MIT License**.  
