@@ -68,17 +68,6 @@ sudo apt install g++
 sudo apt install i2c-tools libi2c-dev
 ```
 
-### **3. Enable I2C on Linux**
-Enable I2C on a **Raspberry Pi** or other Linux systems:
-```bash
-sudo raspi-config   # Enable I2C in "Interfacing Options"
-```
-
-Check available I2C buses:
-```bash
-ls /dev/i2c-*
-```
-
 ---
 
 ## 🚀 **Installation & Compilation**
