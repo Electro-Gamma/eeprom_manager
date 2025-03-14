@@ -53,7 +53,7 @@ ls /dev/i2c-*
 ### **1. Clone the Repository**
 ```bash
 git clone https://github.com/Electro-Gamma/eeprom-manager.git
-cd eeprom_manager
+cd eeprom-manager
 ```
 
 ### **2. Compile the Program**
