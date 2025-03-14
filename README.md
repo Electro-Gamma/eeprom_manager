@@ -74,8 +74,8 @@ sudo apt install i2c-tools libi2c-dev
 
 ### **1. Clone the Repository**
 ```bash
-git clone https://github.com/Electro-Gamma/eeprom-manager.git
-cd eeprom-manager
+git clone https://github.com/Electro-Gamma/gpio-i2c-eeprom.git
+cd gpio-i2c-eeprom
 ```
 
 ### **2. Compile the Program**
