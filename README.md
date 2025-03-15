@@ -1,6 +1,6 @@
 # EEPROM I2C Manager
 
-EEPROM I2C Manager is a **C++ command-line tool** for reading, writing, and managing **I2C EEPROM devices**.  
+EEPROM I2C Manager is a **C++ command-line tool** for reading, writing, and managing **I2C EEPROM devices using GPIO**.  
 It supports various EEPROM chip sizes and provides essential functionalities like dumping EEPROM contents, writing random data, flashing firmware, and more.
 
 ---
