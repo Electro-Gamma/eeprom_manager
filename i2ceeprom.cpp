@@ -29,6 +29,21 @@ std::map<std::string, int> eeprom_sizes = {
     {"24C1024", 131072} // 1024 Kb -> 131072 bytes
 };
 
+// Map of EEPROM page sizes
+std::map<std::string, int> eeprom_page_sizes = {
+    {"24C01", 8},     // 8 bytes per page
+    {"24C02", 8},     // 8 bytes per page
+    {"24C04", 16},    // 16 bytes per page
+    {"24C08", 16},    // 16 bytes per page
+    {"24C16", 16},    // 16 bytes per page
+    {"24C32", 32},    // 32 bytes per page
+    {"24C64", 32},    // 32 bytes per page
+    {"24C128", 64},   // 64 bytes per page
+    {"24C256", 64},   // 64 bytes per page
+    {"24C512", 128},  // 128 bytes per page
+    {"24C1024", 128}  // 128 bytes per page
+};
+
 // Function to open the I2C bus
 int open_i2c_bus(const std::string& bus_path) {
     int fd = open(bus_path.c_str(), O_RDWR);
@@ -56,48 +71,116 @@ void detect_i2c_devices(int fd) {
     }
 }
 
-// Function to write a page to EEPROM
-void eeprom_write_page(int fd, uint8_t device_address, uint16_t eeaddr, const uint8_t* data, size_t data_size) {
-    uint8_t devaddr = device_address | ((eeaddr >> 8) & 0x07);
-    uint8_t addr = eeaddr & 0xFF;
+// Function to write a page to EEPROM (single-byte addressing)
+void eeprom_write_page_single(int fd, uint8_t device_address, uint16_t eeaddr, const uint8_t* data, size_t data_size) {
+    uint8_t devaddr = device_address | ((eeaddr >> 8) & 0x07); // Handle higher address bits for 24C08
+    uint8_t addr_low = eeaddr & 0xFF; // Lower byte of address
 
-    uint8_t buffer[data_size + 1];
-    buffer[0] = addr;
-    std::memcpy(buffer + 1, data, data_size);
+    // Calculate the number of bytes until the next page boundary
+    uint16_t page_size = 16; // Page size for 24C08
+    uint16_t bytes_until_page_boundary = page_size - (eeaddr % page_size);
+
+    // Ensure data_size is within the bounds of uint16_t
+    uint16_t bytes_to_write = std::min(static_cast<uint16_t>(data_size), bytes_until_page_boundary);
+
+    uint8_t buffer[bytes_to_write + 1]; // Buffer for address + data
+    buffer[0] = addr_low; // Single-byte address for 24C08
+
+    std::memcpy(buffer + 1, data, bytes_to_write);
 
     if (ioctl(fd, I2C_SLAVE, devaddr) < 0) {
         std::cerr << "Error: Failed to set I2C slave address." << std::endl;
         return;
     }
 
-    if (write(fd, buffer, data_size + 1) != static_cast<ssize_t>(data_size + 1)) {
+    if (write(fd, buffer, bytes_to_write + 1) != static_cast<ssize_t>(bytes_to_write + 1)) {
         std::cerr << "Error: Failed to write to EEPROM." << std::endl;
     }
-    usleep(10000); // 10 ms delay for EEPROM write cycle
+
+    // Delay for EEPROM write cycle (5ms minimum)
+    usleep(5000);
 }
 
-// Function to read a page from EEPROM
-void eeprom_read_page(int fd, uint8_t device_address, uint16_t eeaddr, uint8_t* data, size_t data_size) {
-    uint8_t devaddr = device_address | ((eeaddr >> 8) & 0x07);
-    uint8_t addr = eeaddr & 0xFF;
+// Function to write a page to EEPROM (two-byte addressing)
+void eeprom_write_page_double(int fd, uint8_t device_address, uint16_t eeaddr, const uint8_t* data, size_t data_size) {
+    uint8_t devaddr = device_address; // Device address (no need to modify for 24C256)
+    uint8_t addr_low = eeaddr & 0xFF; // Lower byte of address
+    uint8_t addr_high = (eeaddr >> 8) & 0xFF; // Higher byte of address
+
+    // Calculate the number of bytes until the next page boundary
+    uint16_t page_size = 64; // Page size for 24C256
+    uint16_t bytes_until_page_boundary = page_size - (eeaddr % page_size);
+
+    // Ensure data_size is within the bounds of uint16_t
+    uint16_t bytes_to_write = std::min(static_cast<uint16_t>(data_size), bytes_until_page_boundary);
+
+    uint8_t buffer[bytes_to_write + 2]; // Buffer for address + data
+    buffer[0] = addr_high; // High byte of address
+    buffer[1] = addr_low;  // Low byte of address
+
+    std::memcpy(buffer + 2, data, bytes_to_write);
 
     if (ioctl(fd, I2C_SLAVE, devaddr) < 0) {
         std::cerr << "Error: Failed to set I2C slave address." << std::endl;
         return;
     }
 
-    if (write(fd, &addr, 1) != 1) {
+    if (write(fd, buffer, bytes_to_write + 2) != static_cast<ssize_t>(bytes_to_write + 2)) {
+        std::cerr << "Error: Failed to write to EEPROM." << std::endl;
+    }
+
+    // Delay for EEPROM write cycle (5ms minimum)
+    usleep(5000);
+}
+
+// Function to read a page from EEPROM (single-byte addressing)
+void eeprom_read_page_single(int fd, uint8_t device_address, uint16_t eeaddr, uint8_t* data, size_t data_size) {
+    uint8_t devaddr = device_address | ((eeaddr >> 8) & 0x07); // Handle higher address bits for 24C08
+    uint8_t addr_low = eeaddr & 0xFF; // Lower byte of address
+
+    if (ioctl(fd, I2C_SLAVE, devaddr) < 0) {
+        std::cerr << "Error: Failed to set I2C slave address." << std::endl;
+        return;
+    }
+
+    // Write the address to read from
+    if (write(fd, &addr_low, 1) != 1) {
         std::cerr << "Error: Failed to write EEPROM address." << std::endl;
         return;
     }
 
+    // Read the data
+    if (read(fd, data, data_size) != static_cast<ssize_t>(data_size)) {
+        std::cerr << "Error: Failed to read from EEPROM." << std::endl;
+    }
+}
+
+// Function to read a page from EEPROM (two-byte addressing)
+void eeprom_read_page_double(int fd, uint8_t device_address, uint16_t eeaddr, uint8_t* data, size_t data_size) {
+    uint8_t devaddr = device_address; // Device address (no need to modify for 24C256)
+    uint8_t addr_low = eeaddr & 0xFF; // Lower byte of address
+    uint8_t addr_high = (eeaddr >> 8) & 0xFF; // Higher byte of address
+
+    if (ioctl(fd, I2C_SLAVE, devaddr) < 0) {
+        std::cerr << "Error: Failed to set I2C slave address." << std::endl;
+        return;
+    }
+
+    // Write the address to read from
+    uint8_t addr_buffer[2] = {addr_high, addr_low};
+    if (write(fd, addr_buffer, 2) != 2) {
+        std::cerr << "Error: Failed to write EEPROM address." << std::endl;
+        return;
+    }
+
+    // Read the data
     if (read(fd, data, data_size) != static_cast<ssize_t>(data_size)) {
         std::cerr << "Error: Failed to read from EEPROM." << std::endl;
     }
 }
 
 // Function to dump EEPROM data
-void dump_eeprom(int fd, uint8_t device_address, uint16_t start_addr, size_t n_bytes) {
+void dump_eeprom(int fd, uint8_t device_address, uint16_t start_addr, size_t n_bytes, const std::string& eeprom_type) {
     std::cout << "EEPROM DUMP 0x" << std::hex << start_addr << " 0x" << n_bytes << std::endl;
     std::cout << "       00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F      ASCII DATA" << std::endl;
 
@@ -106,7 +189,11 @@ void dump_eeprom(int fd, uint8_t device_address, uint16_t start_addr, size_t n_b
 
     for (size_t p = 0; p < n_bytes; p += page_size) {
         uint16_t page_addr = start_addr + p;
-        eeprom_read_page(fd, device_address, page_addr, page_data, page_size);
+        if (eeprom_sizes[eeprom_type] <= 2048) {
+            eeprom_read_page_single(fd, device_address, page_addr, page_data, page_size);
+        } else {
+            eeprom_read_page_double(fd, device_address, page_addr, page_data, page_size);
+        }
 
         std::cout << "0x" << std::hex << std::setw(4) << std::setfill('0') << page_addr << " | ";
         for (size_t c = 0; c < page_size; c++) {
@@ -126,12 +213,12 @@ void dump_eeprom(int fd, uint8_t device_address, uint16_t start_addr, size_t n_b
 }
 
 // Function to write random data to EEPROM
-void eeprom_write_random_data(int fd, uint8_t device_address, size_t eeprom_size) {
+void eeprom_write_random_data(int fd, uint8_t device_address, size_t eeprom_size, const std::string& eeprom_type) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 255);
 
-    const size_t page_size = 16;
+    const size_t page_size = eeprom_page_sizes[eeprom_type];
     uint8_t page_data[page_size];
 
     for (size_t addr = 0; addr < eeprom_size; addr += page_size) {
@@ -139,28 +226,36 @@ void eeprom_write_random_data(int fd, uint8_t device_address, size_t eeprom_size
         for (size_t i = 0; i < bytes_to_write; i++) {
             page_data[i] = static_cast<uint8_t>(dis(gen));
         }
-        eeprom_write_page(fd, device_address, addr, page_data, bytes_to_write);
+        if (eeprom_sizes[eeprom_type] <= 2048) {
+            eeprom_write_page_single(fd, device_address, addr, page_data, bytes_to_write);
+        } else {
+            eeprom_write_page_double(fd, device_address, addr, page_data, bytes_to_write);
+        }
     }
 
     std::cout << "Random data written to EEPROM." << std::endl;
 }
 
 // Function to blank the EEPROM (write 0xFF to all bytes)
-void eeprom_blank(int fd, uint8_t device_address, size_t eeprom_size) {
-    const size_t page_size = 16;
+void eeprom_blank(int fd, uint8_t device_address, size_t eeprom_size, const std::string& eeprom_type) {
+    const size_t page_size = eeprom_page_sizes[eeprom_type];
     uint8_t blank_data[page_size];
     std::fill(blank_data, blank_data + page_size, 0xFF);
 
     for (size_t addr = 0; addr < eeprom_size; addr += page_size) {
         size_t bytes_to_write = std::min(page_size, eeprom_size - addr);
-        eeprom_write_page(fd, device_address, addr, blank_data, bytes_to_write);
+        if (eeprom_sizes[eeprom_type] <= 2048) {
+            eeprom_write_page_single(fd, device_address, addr, blank_data, bytes_to_write);
+        } else {
+            eeprom_write_page_double(fd, device_address, addr, blank_data, bytes_to_write);
+        }
     }
 
     std::cout << "EEPROM blanked (all bytes set to 0xFF)." << std::endl;
 }
 
 // Function to write firmware to EEPROM from a file
-void write_firmware_to_eeprom(int fd, uint8_t device_address, const std::string& file_path, size_t eeprom_size) {
+void write_firmware_to_eeprom(int fd, uint8_t device_address, const std::string& file_path, size_t eeprom_size, const std::string& eeprom_type) {
     std::ifstream firmware_file(file_path, std::ios::binary | std::ios::ate);
     if (!firmware_file) {
         std::cerr << "Error: Could not open file " << file_path << " for reading." << std::endl;
@@ -175,31 +270,39 @@ void write_firmware_to_eeprom(int fd, uint8_t device_address, const std::string&
         return;
     }
 
-    const size_t page_size = 16;
+    const size_t page_size = eeprom_page_sizes[eeprom_type];
     uint8_t page_data[page_size];
 
     for (size_t addr = 0; addr < file_size; addr += page_size) {
         size_t bytes_to_read = std::min(page_size, file_size - addr);
         firmware_file.read(reinterpret_cast<char*>(page_data), bytes_to_read);
-        eeprom_write_page(fd, device_address, addr, page_data, bytes_to_read);
+        if (eeprom_sizes[eeprom_type] <= 2048) {
+            eeprom_write_page_single(fd, device_address, addr, page_data, bytes_to_read);
+        } else {
+            eeprom_write_page_double(fd, device_address, addr, page_data, bytes_to_read);
+        }
     }
 
     std::cout << "Firmware written to EEPROM." << std::endl;
 }
 
 // Function to save firmware from EEPROM to a file
-void save_firmware_to_file(int fd, uint8_t device_address, size_t eeprom_size, const std::string& file_path) {
+void save_firmware_to_file(int fd, uint8_t device_address, size_t eeprom_size, const std::string& file_path, const std::string& eeprom_type) {
     std::ofstream firmware_file(file_path, std::ios::binary);
     if (!firmware_file) {
         std::cerr << "Error: Could not open file " << file_path << " for writing." << std::endl;
         return;
     }
 
-    const size_t page_size = 16;
+    const size_t page_size = eeprom_page_sizes[eeprom_type];
     uint8_t page_data[page_size];
 
     for (size_t addr = 0; addr < eeprom_size; addr += page_size) {
-        eeprom_read_page(fd, device_address, addr, page_data, page_size);
+        if (eeprom_sizes[eeprom_type] <= 2048) {
+            eeprom_read_page_single(fd, device_address, addr, page_data, page_size);
+        } else {
+            eeprom_read_page_double(fd, device_address, addr, page_data, page_size);
+        }
         firmware_file.write(reinterpret_cast<char*>(page_data), page_size);
     }
 
@@ -307,23 +410,23 @@ int main(int argc, char* argv[]) {
     }
 
     if (read) {
-        dump_eeprom(fd, device_address, 0x0000, eeprom_bytes);
+        dump_eeprom(fd, device_address, 0x0000, eeprom_bytes, eeprom_size);
     }
 
     if (random) {
-        eeprom_write_random_data(fd, device_address, eeprom_bytes);
+        eeprom_write_random_data(fd, device_address, eeprom_bytes, eeprom_size);
     }
 
     if (blank) {
-        eeprom_blank(fd, device_address, eeprom_bytes);
+        eeprom_blank(fd, device_address, eeprom_bytes, eeprom_size);
     }
 
     if (!write_firmware_path.empty()) {
-        write_firmware_to_eeprom(fd, device_address, write_firmware_path, eeprom_bytes);
+        write_firmware_to_eeprom(fd, device_address, write_firmware_path, eeprom_bytes, eeprom_size);
     }
 
     if (!save_firmware_path.empty()) {
-        save_firmware_to_file(fd, device_address, eeprom_bytes, save_firmware_path);
+        save_firmware_to_file(fd, device_address, eeprom_bytes, save_firmware_path, eeprom_size);
     }
 
     close(fd);
